@@ -10,6 +10,9 @@
 	"observability": {
 		"enabled": true,
 	},
+	"ai": {
+		"binding": "AI",
+	},
 	"vars": {
 		"SUPABASE_URL": "https://qckojowolfcvtzsmnbtl.supabase.co",
 		"SUPABASE_PUBLISHABLE_KEY": "sb_publishable_TR7pEMuQyi_0qho5LCHymw_5FPJJr1w",
