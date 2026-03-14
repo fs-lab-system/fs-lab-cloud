@@ -15,6 +15,19 @@
 		"SUPABASE_PUBLISHABLE_KEY": "sb_publishable_TR7pEMuQyi_0qho5LCHymw_5FPJJr1w",
 	},
 	"compatibility_flags": ["nodejs_compat"],
+	"kv_namespaces": [
+		{
+			"binding": "AI_ANALYSIS",
+			"id": "c544805eb4094bf0ac51b06b33572aa6",
+		},
+	],
+	"d1_databases": [
+		{
+			"binding": "ai_analysis_db",
+			"database_name": "ai-analysis-db",
+			"database_id": "affe189a-7b8a-46b6-993a-2e8945c4a146",
+		},
+	],
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

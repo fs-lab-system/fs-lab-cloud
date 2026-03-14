@@ -21,41 +21,70 @@ export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		/* create the HTTP response */
 		try {
-			// get the last 3 days
-			const since = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+			const url = new URL(request.url);
 
-			/* benchmarks_runs once per hours for 3 services (3 rows per hour -> 24 rows per day). 
+			/* TESTING */
+			if (url.pathname === '/kv-test') {
+				const testData = {
+					message: 'KV storage works',
+					time: new Date().toISOString(),
+				};
+
+				await env.AI_ANALYSIS.put('kv_test', JSON.stringify(testData));
+
+				const stored = await env.AI_ANALYSIS.get('kv_test');
+
+				return Response.json({
+					written: testData,
+					readBack: stored ? JSON.parse(stored) : null,
+				});
+
+				/* PRODUCTIVE, NORMAL WORKER CODE */
+			} else {
+				/*get the last 3 days*/
+				const since = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+
+				/* base URL for query */
+				const supabaseRestBase = `${env.SUPABASE_URL}/rest/v1/`;
+
+				/* specific parameters for query */
+				const runsQuery = `?created_at=gte.${since}&order=created_at.desc`;
+				const snapshotsQuery = `?run_timestamp=gte.${since}&order=run_timestamp.desc`;
+
+				/* benchmarks_runs once per hours for 3 services (3 rows per hour -> 24 rows per day). 
 			For 3 days: 24 hours * 3 services * 3 days = 216 */
-			const runsResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/benchmark_runs?created_at=gte.${since}&order=created_at.desc`, {
-				headers: {
-					apikey: env.SUPABASE_PUBLISHABLE_KEY,
-					Authorization: `Bearer ${env.SUPABASE_PUBLISHABLE_KEY}`,
-				},
-			});
-
-			/* snapshot_feature table runs once per day for 3 services of the entire day 
-			(3 rows per day -> 1 row for each service). 
-			For 3 days:  = 3 days * 3 services = 9 rows */
-			const snapshotsResponse = await fetch(
-				`${env.SUPABASE_URL}/rest/v1/service_feature_snapshots?run_timestamp=gte.${since}&order=run_timestamp.desc`,
-				{
+				const runsResponse = await fetch(supabaseRestBase + 'benchmark_runs' + runsQuery, {
 					headers: {
 						apikey: env.SUPABASE_PUBLISHABLE_KEY,
 						Authorization: `Bearer ${env.SUPABASE_PUBLISHABLE_KEY}`,
 					},
-				},
-			);
+				});
 
-			/*saving time by parrallel requests */
-			const [runData, snapshotData] = await Promise.all([runsResponse.json(), snapshotsResponse.json()]);
+				/* snapshot_feature table runs once per day for 3 services of the entire day 
+			(3 rows per day -> 1 row for each service). 
+			For 3 days:  = 3 days * 3 services = 9 rows */
+				const snapshotsResponse = await fetch(supabaseRestBase + 'service_feature_snapshots' + snapshotsQuery, {
+					headers: {
+						apikey: env.SUPABASE_PUBLISHABLE_KEY,
+						Authorization: `Bearer ${env.SUPABASE_PUBLISHABLE_KEY}`,
+					},
+				});
 
-			/* return JOSN response of both requests */
-			return Response.json({
-				runs: runData,
-				snapshots: snapshotData,
-			});
+				/*saving time by parrallel requests */
+				//const [runData, snapshotData] = await Promise.all([runsResponse.json(), snapshotsResponse.json()]);
+
+				/* more robust code, easier to debug */
+				const runData = await runsResponse.json();
+				const snapshotData = await snapshotsResponse.json();
+
+				/* return JOSN response of both requests */
+				return Response.json({
+					runs: runData,
+					snapshots: snapshotData,
+				});
+			}
 		} catch (err) {
-			/* DEBUGGING */
+			/* DEBUGGING INFO */
 			return new Response(
 				JSON.stringify({
 					error: String(err),
