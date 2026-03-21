@@ -13,6 +13,8 @@
 import { fetchSnapshots } from '../src/services/supabase';
 import { buildSnapshotPrompt } from '../src/prompts/snapshotPrompt';
 import { runAnalysis } from './services/ai';
+import { saveAnalysis } from './services/db';
+import { getFromKV, saveToKV } from './services/kv';
 
 /* ENTRY POINT OF WORKER */
 export default {
@@ -29,26 +31,39 @@ export default {
 			/* get current URL */
 			const url = new URL(request.url);
 
-			/* TESTING */
+			/* D1 TESTING */
+			if (url.pathname === '/d1-test') {
+				await saveAnalysis(env, {
+					model: 'test',
+					model_version: 'test',
+					prompt_version: 'v1',
+					analysis: 'D1 works',
+					dataset: 'snapshots',
+					data_since: new Date().toISOString(),
+				});
+
+				return Response.json({ success: true });
+			}
+
+			/* KV TESTING */
 			if (url.pathname === '/kv-test') {
 				const testData = {
 					message: 'KV storage works',
 					time: new Date().toISOString(),
 				};
 
-				await env.AI_ANALYSIS.put('kv_test', JSON.stringify(testData));
+				await saveToKV(env, 'kv_test', testData);
 
-				const stored = await env.AI_ANALYSIS.get('kv_test');
+				const stored = await getFromKV(env, 'kv_test');
 
 				return Response.json({
 					written: testData,
-					readBack: stored ? JSON.parse(stored) : null,
+					readBack: stored,
 				});
-
-				/* PRODUCTIVE, NORMAL WORKER CODE */
 			} else {
-				/* get data from table */
-				const snapshots = await fetchSnapshots(env);
+				/* PRODUCTIVE, NORMAL WORKER CODE */
+				/* get data from table (last 7 days) */
+				const snapshots = await fetchSnapshots(env, 7);
 
 				/* get prompt */
 				const prompt = buildSnapshotPrompt(snapshots);
@@ -58,8 +73,8 @@ export default {
 
 				/* return JOSN response of both requests */
 				return Response.json({
-					llamaSnapshotsAnalysis: analyses.llama,
-					mistralSnapshotsAnalysis: analyses.mistral,
+					llamaSnapshotsAnalysis: analyses.llama ?? 'NO DATA',
+					mistralSnapshotsAnalysis: analyses.mistral ?? 'NO DATA',
 				});
 			}
 		} catch (err) {

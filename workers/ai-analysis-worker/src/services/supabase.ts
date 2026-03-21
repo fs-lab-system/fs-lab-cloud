@@ -1,9 +1,9 @@
 import { FeatureSnapshot } from '../types/snapshot';
 
 /* fetch function */
-export async function fetchSnapshots(env: Env): Promise<FeatureSnapshot[]> {
+export async function fetchSnapshots(env: Env, days: number): Promise<FeatureSnapshot[]> {
 	/*get the last 3 days*/
-	const since: string = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+	const since: string = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
 	/* base URL for query */
 	const supabaseRestBase: string = `${env.SUPABASE_URL}/rest/v1/`;
