@@ -12,9 +12,11 @@
  */
 import { fetchSnapshots } from '../src/services/supabase';
 import { buildSnapshotPrompt } from '../src/prompts/snapshotPrompt';
+
 import { runAnalysis } from './services/ai';
 import { saveAnalysis } from './services/db';
 import { getFromKV, saveToKV } from './services/kv';
+import { aggregateSnapshots } from './utils/aggregateSnapshots';
 
 /* ENTRY POINT OF WORKER */
 export default {
@@ -62,11 +64,14 @@ export default {
 				});
 			} else {
 				/* PRODUCTIVE, NORMAL WORKER CODE */
-				/* get data from table (last 7 days) */
+				/* get data from table (last X days) */
 				const snapshots = await fetchSnapshots(env, 7);
 
+				/* aggregate the snapshots, to make ai analysis easier */
+				const aggregatedSnapshots = aggregateSnapshots(snapshots);
+
 				/* get prompt */
-				const prompt = buildSnapshotPrompt(snapshots);
+				const prompt = buildSnapshotPrompt(aggregatedSnapshots);
 
 				/* responses */
 				const analyses = await runAnalysis(env, prompt);
@@ -75,6 +80,7 @@ export default {
 				return Response.json({
 					llamaSnapshotsAnalysis: analyses.llama ?? 'NO DATA',
 					mistralSnapshotsAnalysis: analyses.mistral ?? 'NO DATA',
+					aggregatedSnapshots: aggregatedSnapshots,
 				});
 			}
 		} catch (err) {
