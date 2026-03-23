@@ -16,7 +16,7 @@ export async function runAnalysis(env: Env, prompt: string): Promise<Record<stri
 	/* maxTokenSize: limit Token usage, temperature: limit creativity */
 	/* top_p = nucleus sampling: the smaller, the more important words gets chosen next */
 	const AI_OPTIONS = {
-		max_tokens: 500,
+		max_tokens: 750,
 		temperature: 0.2,
 		top_p: 0.9,
 	};
