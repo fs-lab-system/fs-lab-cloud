@@ -1,16 +1,30 @@
 import { runAIWithTimeout } from '../utils/timeout';
 
 /* ai- models */
-const MODELS = [
+export const MODELS = [
 	{
 		name: 'llama',
 		id: '@cf/meta/llama-3.1-8b-instruct-fp8',
 	},
 	{
 		name: 'mistral',
-		id: '@cf/mistral/mistral-7b-instruct-v0.1',
+		id: '@cf/mistralai/mistral-small-3.1-24b-instruct',
 	},
 ];
+
+/* build lookup map once */
+export const MODEL_MAP = Object.fromEntries(MODELS.map((m) => [m.name, m.id])) as Record<string, string>;
+
+export function getModelVersion(model: string): string {
+	const version = MODEL_MAP[model];
+
+	if (!version) {
+		console.warn(`Unknown model: ${model}`);
+		return 'unknown_model';
+	}
+
+	return version;
+}
 
 export async function runAnalysis(env: Env, prompt: string): Promise<Record<string, string>> {
 	/* maxTokenSize: limit Token usage, temperature: limit creativity */

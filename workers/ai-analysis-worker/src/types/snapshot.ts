@@ -24,3 +24,12 @@ export interface AggregatedService {
 	min_success_rate: number; /* risk layer */
 	sample_size: number; /* context layer */
 }
+
+export type AnalysisInsert = {
+	model: string;
+	model_version: string;
+	prompt_version: string;
+	analysis: string;
+	dataset: string;
+	data_since: string;
+};

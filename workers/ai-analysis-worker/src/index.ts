@@ -14,7 +14,7 @@ import { fetchSnapshots } from '../src/services/supabase';
 import { buildSnapshotPrompt } from '../src/prompts/snapshotPrompt';
 
 import { runAnalysis } from './services/ai';
-import { saveAnalysis } from './services/db';
+import { saveAnalysisToD1 } from './services/db';
 import { getFromKV, saveToKV } from './services/kv';
 import { aggregateSnapshots } from './utils/aggregateSnapshots';
 
@@ -35,16 +35,27 @@ export default {
 
 			/* D1 TESTING */
 			if (url.pathname === '/d1-test') {
-				await saveAnalysis(env, {
-					model: 'test',
-					model_version: 'test',
-					prompt_version: 'v1',
-					analysis: 'D1 works',
-					dataset: 'snapshots',
-					data_since: new Date().toISOString(),
-				});
+				await saveAnalysisToD1(
+					env,
+					{
+						llama: 'D1 works',
+						mistral: 'D1 works',
+					},
+					{
+						prompt_version: 'v1',
+						dataset: 'snapshots',
+						data_since: new Date().toISOString(),
+					},
+				);
 
-				return Response.json({ success: true });
+				const latest = await env.ai_analysis_db
+					.prepare(
+						`
+					SELECT * FROM analysis_reports ORDER BY created_at DESC LIMIT 2`,
+					)
+					.all();
+
+				return Response.json(latest);
 			}
 
 			/* KV TESTING */
@@ -75,6 +86,13 @@ export default {
 
 				/* responses */
 				const analyses = await runAnalysis(env, prompt);
+
+				/* save in d1 */
+				await saveAnalysisToD1(env, analyses, {
+					prompt_version: PROMPT_VERSION,
+					dataset: 'snapshots',
+					data_since: new Date().toISOString(),
+				});
 
 				/* return JOSN response of both requests */
 				return Response.json({

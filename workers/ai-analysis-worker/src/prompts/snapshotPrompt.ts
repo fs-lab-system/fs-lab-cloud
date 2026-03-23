@@ -11,6 +11,8 @@ export function buildSnapshotPrompt(data: AggregatedService[]): string {
 		GLOBAL RULES (CRITICAL):
 
 		-> ALWAYS compare numbers explicitly
+		-> ONLY use values from dataset. 
+		-> DO NOT modify numbers.
 		-> NEVER approximate values
 		-> NEVER assume values are "close"
 		-> LOWER values are ALWAYS better for:
@@ -62,6 +64,7 @@ export function buildSnapshotPrompt(data: AggregatedService[]): string {
 
 		- Fastest service = service with lowest avg_p50_latency_s
 		- Most stable service = service with lowest stability_score
+		- If min_success_rate = 0 → MUST be marked as CRITICAL failure (no exceptions)
 
 		You MUST use the values from STEP 1.
 
