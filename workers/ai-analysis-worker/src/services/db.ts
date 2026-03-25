@@ -49,29 +49,35 @@ export async function saveAnalysisToD1(
 }
 
 export async function savePromptIfNotExists(env: Env, prompt: string, version: string) {
+	/* 
+	turn prompt into hash-code to compare text quicker 
+	text -> bytes -> has -> string join
+	*/
 	const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(prompt));
-
 	const hashHex = Array.from(new Uint8Array(hash))
 		.map((b) => b.toString(16).padStart(2, '0'))
 		.join('');
 
-	/* check if exists */
+	/* check if hash of text exists */
 	const existing = await env.ai_analysis_db.prepare(`SELECT id FROM prompt_versions WHERE id = ?`).bind(hashHex).first();
 
+	/* only save, if not already in database */
 	if (!existing) {
-		await env.ai_analysis_db
+		const result = await env.ai_analysis_db
 			.prepare(
 				`
-				INSERT OR IGNORE INTO prompt_versions  (
-					id,
-					created_at,
-					version,
-					prompt_template,
-					description
-				) VALUES (?, ?, ?, ?, ?)
-			`,
+		INSERT INTO prompt_versions (
+			id,
+			created_at,
+			version,
+			prompt_template,
+			description
+		) VALUES (?, ?, ?, ?, ?)
+	`,
 			)
-			.bind(hashHex, new Date().toISOString(), version, prompt, 'auto-saved prompt version')
+			.bind(hashHex, new Date().toISOString(), version, prompt, 'auto-saved')
 			.run();
+
+		console.log('D1 result:', result);
 	}
 }
