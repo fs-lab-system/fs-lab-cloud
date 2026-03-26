@@ -4,7 +4,7 @@ import { runAIWithTimeout } from '../utils/timeout';
 export const MODELS = [
 	{
 		name: 'llama',
-		id: '@cf/meta/llama-3.1-8b-instruct-fp8',
+		id: '@cf/meta/llama-4-scout-17b-16e-instruct',
 	},
 	{
 		name: 'mistral',

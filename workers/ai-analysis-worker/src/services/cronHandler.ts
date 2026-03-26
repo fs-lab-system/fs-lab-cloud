@@ -1,4 +1,4 @@
-import { daysOfData, PROMPT_VERSION, since } from '..';
+import { daysOfData, PROMPT_VERSION } from '..';
 import { buildSnapshotPrompt } from '../prompts/snapshotPrompt';
 import { aggregateSnapshots } from '../utils/aggregateSnapshots';
 import { runAnalysis } from './ai';
@@ -10,6 +10,8 @@ import { fetchSnapshots } from './supabase';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 export async function runDailyAnalysis(env: Env, force = false) {
+	const since = new Date(Date.now() - daysOfData * 24 * 60 * 60 * 1000).toISOString();
+
 	/* PRODUCTIVE, NORMAL WORKER CODE */
 	try {
 		/* check if env variables are fine */

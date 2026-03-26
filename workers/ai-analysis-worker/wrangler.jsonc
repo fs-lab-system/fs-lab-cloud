@@ -13,9 +13,15 @@
 	"ai": {
 		"binding": "AI",
 	},
+	"triggers": {
+		//"crons": ["*/5 * * * *"], /* every 5 minutes*/
+		"crons": ["0 2 * * *"] /* once per day at 02:00 UTC */,
+		// "crons": [] /* turning cron off */,
+	},
 	"vars": {
 		"SUPABASE_URL": "https://qckojowolfcvtzsmnbtl.supabase.co",
 		"SUPABASE_PUBLISHABLE_KEY": "sb_publishable_TR7pEMuQyi_0qho5LCHymw_5FPJJr1w",
+		"ENV": "dev",
 	},
 	"compatibility_flags": ["nodejs_compat"],
 	"kv_namespaces": [

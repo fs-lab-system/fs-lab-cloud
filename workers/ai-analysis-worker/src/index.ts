@@ -12,16 +12,12 @@
  */
 
 import { runDailyAnalysis } from './services/cronHandler';
-import { saveAnalysisToD1 } from './services/db';
-import { getFromKV, saveToKV } from './services/kv';
+import { getFromKV } from './services/kv';
 
 export const PROMPT_VERSION = 'v1.0.0';
 
 /* how many days ago get data */
 export const daysOfData: number = 7;
-
-/* date string */
-export const since = new Date(Date.now() - daysOfData * 24 * 60 * 60 * 1000).toISOString();
 
 /* ENTRY POINT OF WORKER */
 export default {
@@ -35,7 +31,6 @@ export default {
 		try {
 			/* get current URL */
 			const url = new URL(request.url);
-
 			/* only GET Method allowed! */
 			if (request.method !== 'GET') {
 				return new Response('Method Not Allowed', { status: 405 });
@@ -43,63 +38,41 @@ export default {
 
 			/* D1 TESTING */
 			if (url.pathname === '/d1-test') {
-				await saveAnalysisToD1(
-					env,
-					{
-						llama: 'D1 works',
-						mistral: 'D1 works',
-					},
-					{
-						prompt_version: PROMPT_VERSION,
-						dataset: 'snapshots',
-						data_since: since,
-					},
-				);
-
 				const latest = await env.ai_analysis_db
 					.prepare(
 						`
-					SELECT * FROM analysis_reports ORDER BY created_at DESC LIMIT 2`,
+						SELECT * FROM analysis_reports ORDER BY created_at DESC LIMIT 1
+						`,
 					)
-					.all();
-
+					.first();
 				return Response.json(latest);
 			}
 
-			/* KV TESTING */
-			if (url.pathname === '/kv-test') {
-				const testData = {
-					message: 'KV storage works',
-					time: new Date().toISOString(),
-				};
-
-				const stored = await getFromKV<AnalysisCache>(env, 'kv-test');
-
-				return Response.json({
-					written: testData,
-					readBack: stored,
-				});
-			}
-			/* PRODUCTIVE, NORMAL WORKER CODE */
-			if (url.pathname === '/latest') {
+			/* get lastest entry in KV (same as KV-TEST) */
+			if (url.pathname === '/kv-latest') {
 				const cached = await getFromKV<AnalysisCache>(env, 'analysis:latest');
 				return cached ? Response.json(cached) : new Response('No data yet', { status: 404 });
 			}
+			/* PRODUCTIVE, NORMAL WORKER CRONJOB CODE */
 			if (url.pathname === '/run-now') {
-				const result = await runDailyAnalysis(env);
-				return Response.json(result);
+				if (!env.ENV || env.ENV !== 'dev') {
+					return new Response('Forbidden', { status: 403 });
+				} else {
+					const result = await runDailyAnalysis(env, true);
+					return Response.json(result);
+				}
 			}
 
 			/* return possible endpoints */
 			return Response.json({
-				endpoints: ['/latest', '/run-now', '/d1-test', '/kv-test'],
+				endpoints: ['/kv-latest', '/run-now', '/d1-test'],
 			});
 		} catch (err) {
 			/* DEBUGGING INFO */
 			return new Response(
 				JSON.stringify({
-					error: String(err),
-					url: env.SUPABASE_URL,
+					error: err instanceof Error ? err.message : String(err),
+					url: env.SUPABASE_URL ? 'exists' : 'missing',
 					key: env.SUPABASE_PUBLISHABLE_KEY ? 'exists' : 'missing',
 				}),
 				{ status: 500 },
@@ -107,8 +80,9 @@ export default {
 		}
 	},
 	async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
-		console.log('Cron triggered at:', new Date(controller.scheduledTime));
-
-		ctx.waitUntil(runDailyAnalysis(env));
+		/* DEBUG */
+		console.log('[CRON] triggered at:', new Date(controller.scheduledTime).toISOString());
+		/* execute cron job the the sceduled time (wrangler.toml) */
+		ctx.waitUntil(runDailyAnalysis(env, true));
 	},
 } satisfies ExportedHandler<Env>;
